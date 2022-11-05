@@ -71,6 +71,10 @@ func (s *ObjectStorage) unlock() {
 }
 
 func main() {
+	i := 256
+	var c byte = byte(i)
+	fmt.Println(c) //12
+
 	file, err := os.Open("endpoints.chateau")
 	if err != nil {
 		fmt.Println(err)
@@ -308,19 +312,41 @@ func (o *Object) writeFieldsToFile(f *os.File) {
 }
 
 func (o *Object) generateEncode(f *os.File) {
-	_, err := f.WriteString(fmt.Sprintf("func (%s *%s) Encode() {\n", o.Name, o.Name)) // записали имя
+	_, err := f.WriteString(fmt.Sprintf("func (%s *%s) Encode() []byte {\n "+
+		"var res []byte\n"+
+		"\n", o.Name, o.Name)) // записали имя
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = f.WriteString("}\n\n") // записали имя
+	offset := uint64(0)
+	for _, field := range o.Fields {
+		if field.Type.IsSlice { // если это слайс то изначально получаем число записей
+			f.WriteString(fmt.Sprintf("slice%sLenght := len(%s.%s)\n", field.Name, o.Name, field.Name)) // записали имя
+		} else if field.Type.IsArray {
+			f.WriteString(fmt.Sprintf("res = append(res, %s.%s[:]...) \n", o.Name, field.Name))
+			offset += field.Type.ArrLength
+		} else {
+			switch field.Type.BasicKind {
+			case "byte", "uint8":
+				f.WriteString(fmt.Sprintf("res[%d] = %s.%s \n", offset, o.Name, field.Name))
+				offset++
+			case "int8":
+				f.WriteString(fmt.Sprintf("res[%d] = byte(%s.%s) \n", offset, o.Name, field.Name))
+				offset++
+			}
+		}
+	}
+
+	_, err = f.WriteString("\nreturn res\n" +
+		"}\n\n") // записали имя
 	if err != nil {
 		panic(err)
 	}
 }
 
 func (o *Object) generateDecode(f *os.File) {
-	_, err := f.WriteString(fmt.Sprintf("func (%s *%s) Decode() {\n", o.Name, o.Name)) // записали имя
+	_, err := f.WriteString(fmt.Sprintf("func Decode%s(data []byte, out *%s) {\n", o.Name, o.Name)) // записали имя
 	if err != nil {
 		panic(err)
 	}

@@ -2,14 +2,8 @@ package endpoints
 
 object AuthCredentialsResponse {
 	[16]byte SessionToken
-	[]string SliceString
-	uint32 Uint32
-	AuthCredentialsResponsse test
-}
-
-
-object AuthCredentialsResponsse {
-	[16]byte SessionToken
-	[]string SliceString
+	byte OneByte
+	uint8 Uint8
+	int8 Int8
 	uint32 Uint32
 }
